@@ -42,8 +42,6 @@ locked(EventType, EventContent, Data) ->
 opened(info, {timeout, Tref, lock}, #{timer := Tref} = Data) ->
   io:fwrite("closed~n"),
   {next_state, locked, Data};
-opened({cast, From}, attach, Data) ->
-  {next_state, locked, Data, [{reply, From, locked}]};
 opened(EventType, EventContent, Data) ->
   handle_event(EventType, EventContent, Data).
 

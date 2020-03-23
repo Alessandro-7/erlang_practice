@@ -2,15 +2,18 @@
 -behaviour(gen_server).
 
 -export([init/1, handle_call/3, code_change/3, terminate/1]).
--export([start_link/0, callver/1]).
+-export([start_link/0, requestVer/1]).
 
-callver(CardId) ->
-  gen_server:call({global, ?MODULE}, {verification, CardId}).
+% call function for card validation
+requestVer(CardId) ->
+  gen_server:call(?MODULE, {verification, CardId}, 1000).
 
-start_link() -> gen_server:start_link({global, ?MODULE}, ?MODULE, [], []).
+start_link() -> gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 init([]) -> {ok, []}.
 
+% here handle function makes request to the db for information about CardId
+% now only CardId == 28 is valid one
 handle_call({verification, CardId}, _From, State) ->
   case CardId == "28" of
     true ->
@@ -23,7 +26,7 @@ handle_call({verification, CardId}, _From, State) ->
 
 
 terminate(normal) ->
-  io:format("its OK~n"),
+  io:fwrite("its OK~n"),
   ok.
 
 code_change(_OldVsn, State, _Extra) ->

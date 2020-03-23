@@ -1,10 +1,8 @@
 -module(turn_fsm).
 -behaviour(gen_statem).
 
-%% public API
 -export([start_link/1, attach/1]).
 
-%% callback
 -export([terminate/3, code_change/4, init/1, callback_mode/0]).
 -export([locked/3, opened/3, validation/3]).
 
@@ -25,14 +23,16 @@ code_change(_Vsn, State, Data, _Extra) ->
   {ok,State,Data}.
 
 init(Id) ->
-  Data = #{id => Id, timer => 0, cardId => []},
+  Data = #{id => Id, timer => 0},
   {ok, locked, Data}.
 
 callback_mode() -> state_functions.
 
-
+% default locked state
 locked(cast, {attach, CardId}, Data) ->
   ControlSum = lists:foldl(fun(X, Sum) -> (X - $0) + Sum end, 0, CardId),
+  % checking sum of CardId numbers
+  % if sum is 10 then fsm going to validation state
   case ControlSum of
     10 ->
       gen_statem:cast(name(), {valid_card, CardId}),
@@ -44,8 +44,9 @@ locked(cast, {attach, CardId}, Data) ->
 locked(EventType, EventContent, Data) ->
   handle_event(EventType, EventContent, Data).
 
+% validation state sends request to the server
 validation(cast, {valid_card, CardId}, Data) ->
-  case main_serv:callver(CardId) of
+  case main_serv:requestVer(CardId) of
     authorized ->
       io:fwrite("opened for 3 seconds~n"),
       Tref = erlang:start_timer(3000, self(), lock),
@@ -60,6 +61,7 @@ validation(cast, {valid_card, CardId}, Data) ->
 validation(EventType, EventContent, Data) ->
   handle_event(EventType, EventContent, Data).
 
+% opened state with timeout
 opened(info, {timeout, Tref, lock}, #{timer := Tref} = Data) ->
   io:fwrite("closed~n"),
   {next_state, locked, Data};
@@ -67,5 +69,4 @@ opened(EventType, EventContent, Data) ->
   handle_event(EventType, EventContent, Data).
 
 handle_event(_, _, Data) ->
-    %% Ignore all other events
     {keep_state, Data}.

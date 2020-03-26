@@ -38,7 +38,7 @@ locked(cast, {attach, CardId}, Data) ->
       gen_statem:cast(name(), {valid_card, CardId}),
       {next_state, validation, Data};
     _ ->
-      io:fwrite("not valid card~n"),
+      ok = turnstile_show("not valid card"),
       {keep_state, Data}
   end;
 locked(EventType, EventContent, Data) ->
@@ -48,14 +48,14 @@ locked(EventType, EventContent, Data) ->
 validation(cast, {valid_card, CardId}, Data) ->
   case main_serv:requestVer(CardId) of
     authorized ->
-      io:fwrite("opened for 3 seconds~n"),
+      ok = turnstile_open(),
       Tref = erlang:start_timer(3000, self(), lock),
       {next_state, opened, Data#{timer := Tref}};
     not_authorized ->
-      io:fwrite("you are not authorized~n"),
+      ok = turnstile_show("you are not authorized"),
       {next_state, locked, Data};
     _ ->
-      io:fwrite("something wrong~n"),
+      ok = turnstile_show("something wrong"),
       {next_state, locked, Data}
     end;
 validation(EventType, EventContent, Data) ->
@@ -63,10 +63,15 @@ validation(EventType, EventContent, Data) ->
 
 % opened state with timeout
 opened(info, {timeout, Tref, lock}, #{timer := Tref} = Data) ->
-  io:fwrite("closed~n"),
+  ok = turnstile_show("closed"),
   {next_state, locked, Data};
 opened(EventType, EventContent, Data) ->
   handle_event(EventType, EventContent, Data).
 
 handle_event(_, _, Data) ->
     {keep_state, Data}.
+
+turnstile_open() ->
+  io:fwrite("opened for 3 seconds~n").
+turnstile_show(Msg) ->
+  io:fwrite("~s~n", [Msg]).

@@ -21,9 +21,10 @@ handle_call({verification, CardId}, _From, State) ->
     _ ->
       Reply = not_authorized
   end,
-  {reply, Reply, State}.
-
-
+  {reply, Reply, State};
+handle_call(Other, From, State) ->
+  logger:error("Unknown command to ~s from ~p: ~p~n", [?MODULE, From, Other]),
+  {reply, ignored, State}.
 
 terminate(normal) ->
   io:fwrite("its OK~n"),
